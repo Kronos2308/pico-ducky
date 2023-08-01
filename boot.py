@@ -31,6 +31,11 @@ elif(board.board_id == 'raspberry_pi_pico_w'):
     # on Pi Pico W, default to USB hidden by default
     # so webapp can access storage
     noStorage = noStorageStatus
+elif(board.board_id == 'waveshare_rp2040_zero'):
+    # on Pi Pico, default to USB hidden by default
+    # so webapp can access storage
+    noStorage = noStorageStatus
+print(board.board_id)
 
 if(noStorage == True):
     # don't show USB drive to host PC
