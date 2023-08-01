@@ -1,39 +1,40 @@
 # License : GPLv2.0
-# copyright (c) 2023  Dave Bailey
-# Author: Dave Bailey (dbisu, @daveisu)
-# Pico and Pico W board support
+# copyright (c) 2023
+# Author: Kronos2308
+# Pico waveshare_rp2040_zero board support
 
 import time
-import digitalio
-from board import *
 import board
 import neopixel
 import asyncio
 
-
 pixel = neopixel.NeoPixel(board.GP16, 1)
+pixel.brightness = 0.1
 
-async def PulseL(color):
+# Private
+async def Blink(color):
     pixel.fill(color)
     time.sleep(0.2)
     pixel.fill(0x000000)
-
-def PulseW(color):
-    pixel.fill(color)
-    time.sleep(0.2)
-    pixel.fill(0x000000)
-
-def Blink(color):
-    pico_led_task = asyncio.create_task(PulseL(color))
+    
+# Async Pulse
+def PulseA(color=0xffffff):
+    pico_led_task = asyncio.create_task(Blink(color))
     asyncio.gather(pico_led_task)
 
+# Sync Pulse
+def PulseS(color=0xffffff):
+    pixel.fill(color)
+    time.sleep(0.2)
+    pixel.fill(0x000000)
 
+# Set brightness off led
+def Candle(light=0.6):
+    pixel.brightness = light
 
-def LON(G,R,B):
-    pixel.fill((G, R, B))
-    
-def FON(color):
+# Power the Led
+def LON(color=0xffffff):
     pixel.fill(color)
     
 def LOFF():
-    pixel.fill((0, 0, 0))
+    pixel.fill(0x000000)
