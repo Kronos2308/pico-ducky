@@ -6,7 +6,7 @@
 
 import supervisor
 
-
+from LED import *
 import time
 import digitalio
 from board import *
@@ -52,15 +52,12 @@ progStatus = False
 progStatus = getProgrammingStatus()
 print("progStatus", progStatus)
 if(progStatus == False):
-    print("Finding payload")
     # not in setup mode, inject the payload
-    payload = selectPayload()
-    print("Running ", payload)
-    runScript(payload)
-
-    print("Done")
+    LaunchPayload()
 else:
     print("Update your payload")
+    PulseA(0x0000ff)
+
 
 led_state = False
 
@@ -75,8 +72,10 @@ async def main_loop():
         print("Starting Web Service")
         webservice_task = asyncio.create_task(startWebService())
         await asyncio.gather(pico_led_task, button_task, webservice_task)
-    else:
+    elif(board.board_id == 'raspberry_pi_pico'):
         pico_led_task = asyncio.create_task(blink_pico_led(led))
         await asyncio.gather(pico_led_task, button_task)
+    elif(board.board_id == 'waveshare_rp2040_zero'):
+        await asyncio.gather(button_task)
 
 asyncio.run(main_loop())
