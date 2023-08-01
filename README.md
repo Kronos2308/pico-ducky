@@ -227,6 +227,8 @@ keycode_win_de.mpy
 
 ## Useful links and resources
 
+![RP2040 Zero Wiring](images/IMG_20230801_062556e.jpg)
+
 ### How to recover your Pico if it becomes corrupted or doesn't boot.
 
 [Reset Instructions](RESET.md)
