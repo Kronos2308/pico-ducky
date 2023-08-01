@@ -143,8 +143,9 @@ This will prevent the pico-ducky from showing up as a USB drive when plugged int
 
 Pico: The default mode is USB mass storage enabled.   
 Pico W: The default mode is USB mass storage **disabled**  
+RP2040 Zero: The default mode is USB mass storage **disabled** (Slow doble tap Reset to get USB)
 
-![USB enable/disable mode](images/usb-boot-mode.png)
+![RP2040 Zero Wiring](images/IMG_20230801_062556e.jpg)
 
 ## Multiple payloads
 
@@ -154,6 +155,7 @@ To select a payload, ground one of these pins:
 - GP5 - payload2.dd
 - GP10 - payload3.dd
 - GP11 - payload4.dd
+- GP0 - Switch Default Payload
 
 ## Changing Keyboard Layouts
 
@@ -226,8 +228,6 @@ keycode_win_de.mpy
 
 
 ## Useful links and resources
-
-![RP2040 Zero Wiring](images/IMG_20230801_062556e.jpg)
 
 ### How to recover your Pico if it becomes corrupted or doesn't boot.
 
