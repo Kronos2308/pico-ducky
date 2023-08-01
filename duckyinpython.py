@@ -13,15 +13,32 @@ import pwmio
 import asyncio
 import usb_hid
 from adafruit_hid.keyboard import Keyboard
+from LED import *
+import os
 
 # comment out these lines for non_US keyboards
-from adafruit_hid.keyboard_layout_us import KeyboardLayoutUS as KeyboardLayout
-from adafruit_hid.keycode import Keycode
+#from adafruit_hid.keyboard_layout_us import KeyboardLayoutUS as KeyboardLayout
+#from adafruit_hid.keycode import Keycode
 
 # uncomment these lines for non_US keyboards
 # replace LANG with appropriate language
-#from keyboard_layout_win_LANG import KeyboardLayout
-#from keycode_win_LANG import Keycode
+from keyboard_layout_win_es import KeyboardLayout
+from keycode_win_es import Keycode
+
+#Global Vars
+sel = 0
+color = 0xff0000
+payload = "payload.dd"
+DEFA = "default.txt"
+
+def File_check(file):
+    try:
+        if not os.stat(file) == {0}:
+            return True
+    except OSError as e:
+        print("Unable to open file ", file)
+    
+    return False
 
 duckyCommands = {
     'WINDOWS': Keycode.WINDOWS, 'GUI': Keycode.GUI,
@@ -108,7 +125,7 @@ layout = KeyboardLayout(kbd)
 
 
 #init button
-button1_pin = DigitalInOut(GP22) # defaults to input
+button1_pin = DigitalInOut(GP0) # defaults to input
 button1_pin.pull = Pull.UP      # turn on internal pull-up resistor
 button1 =  Debouncer(button1_pin)
 
@@ -125,11 +142,13 @@ payload4Pin.switch_to_input(pull=digitalio.Pull.UP)
 def getProgrammingStatus():
     # check GP0 for setup mode
     # see setup mode for instructions
+    return not button1_pin.value
+    """
     progStatusPin = digitalio.DigitalInOut(GP0)
     progStatusPin.switch_to_input(pull=digitalio.Pull.UP)
     progStatus = not progStatusPin.value
     return(progStatus)
-
+    """
 
 defaultDelay = 0
 
@@ -155,13 +174,14 @@ def runScript(file):
         print("Unable to open file ", file)
 
 def selectPayload():
-    global payload1Pin, payload2Pin, payload3Pin, payload4Pin
-    payload = "payload.dd"
+    global payload1Pin, payload2Pin, payload3Pin, payload4Pin, payload, sel, color, DEFA
+    #payload = "payload.dd"
     # check switch status
     # payload1 = GPIO4 to GND
     # payload2 = GPIO5 to GND
     # payload3 = GPIO10 to GND
     # payload4 = GPIO11 to GND
+    # Preserve Old Select Payload
     payload1State = not payload1Pin.value
     payload2State = not payload2Pin.value
     payload3State = not payload3Pin.value
@@ -178,13 +198,71 @@ def selectPayload():
 
     elif(payload4State == True):
         payload = "payload4.dd"
+        
+    # load The saved File Config
+    elif File_check(DEFA):
+        f = open(DEFA,"r",encoding='utf-8')
+        payload = f.readline()
+        sel = int(f.readline())
+        color = int(f.readline(),16)
+        f.close()
 
-    else:
         # if all pins are high, then no switch is present
         # default to payload1
-        payload = "payload.dd"
-
     return payload
+
+def LaunchPayload():
+    global color, sel
+    # Run selected payload
+    payload = selectPayload()
+    LON(color)
+    runScript(payload)
+    print("Done")
+    LOFF()
+
+def SwitchPayload():
+    global sel, color, payload, DEFA
+    
+    #reset
+    if sel > 4:sel = 1
+        
+    sel+=1
+    if sel == 1:
+        payload = "payload.dd"
+        color = 0xff0000
+        if not File_check(payload):sel+=1
+    if sel == 2:
+        payload = "payload2.dd"
+        color = 0x00ff00
+        if not File_check(payload):sel+=1
+    if sel == 3:
+        payload = "payload3.dd"
+        color = 0xff00ff
+        if not File_check(payload):sel+=1
+    if sel == 4:
+        payload = "payload4.dd"
+        color = 0xffff00
+        if not File_check(payload):sel+=1
+    if sel == 5:#reset
+        color = 0xff0000
+        sel = 1
+        if not payload == "payload.dd":
+            payload = "payload.dd"
+        else:
+            PulseS(color)
+            return
+
+    DEFA = "default.txt"
+
+    if File_check(payload):
+        LON(color)
+        f = open(DEFA,"w+")
+        f.write(payload+"\n"+str(sel)+"\n"+hex(color))
+        f.close()
+        LOFF()
+
+    return
+
 
 async def blink_led(led):
     print("Blink")
@@ -254,11 +332,8 @@ async def monitor_buttons(button1):
 
         if(button1Released):
             if(button1Down):
-                # Run selected payload
-                payload = selectPayload()
-                print("Running ", payload)
-                runScript(payload)
-                print("Done")
+                SwitchPayload()
             button1Down = False
 
         await asyncio.sleep(0)
+
