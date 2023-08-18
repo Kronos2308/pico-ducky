@@ -27,6 +27,7 @@ def PulseS(color=0xffffff):
     pixel.fill(color)
     time.sleep(0.2)
     pixel.fill(0x000000)
+    time.sleep(0.2)
 
 # Set brightness off led
 def Candle(light=0.6):

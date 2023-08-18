@@ -2,6 +2,7 @@
 # copyright (c) 2023  Dave Bailey
 # Author: Dave Bailey (dbisu, @daveisu)
 
+from LED import *
 
 import time
 import digitalio
@@ -13,7 +14,6 @@ import pwmio
 import asyncio
 import usb_hid
 from adafruit_hid.keyboard import Keyboard
-from LED import *
 import os
 
 # comment out these lines for non_US keyboards
@@ -27,7 +27,7 @@ from keycode_win_es import Keycode
 
 #Global Vars
 sel = 0
-color = 0xff0000
+color = 0xffffff
 payload = "payload.dd"
 DEFA = "default.txt"
 
@@ -85,11 +85,13 @@ def convertLine(line):
     return newline
 
 def runScriptLine(line):
+    global kbd
     for k in line:
         kbd.press(k)
     kbd.release_all()
 
 def sendString(line):
+    global layout
     layout.write(line)
 
 def parseLine(line):
@@ -111,44 +113,39 @@ def parseLine(line):
         defaultDelay = int(line[13:]) * 10
     elif(line[0:3] == "LED"):
         if(led.value == True):
+            if(board.board_id == 'waveshare_rp2040_zero'):
+                LON()
             led.value = False
         else:
             led.value = True
+            if(board.board_id == 'waveshare_rp2040_zero'):
+                LOFF()
+
     else:
         newScriptLine = convertLine(line)
         runScriptLine(newScriptLine)
 
-kbd = Keyboard(usb_hid.devices)
-layout = KeyboardLayout(kbd)
-
-
 
 
 #init button
-button1_pin = DigitalInOut(GP0) # defaults to input
+button1_pin = DigitalInOut(GP12) # defaults to input
 button1_pin.pull = Pull.UP      # turn on internal pull-up resistor
 button1 =  Debouncer(button1_pin)
 
 #init payload selection switch
-payload1Pin = digitalio.DigitalInOut(GP4)
+payload1Pin = digitalio.DigitalInOut(GP1)
 payload1Pin.switch_to_input(pull=digitalio.Pull.UP)
-payload2Pin = digitalio.DigitalInOut(GP5)
+payload2Pin = digitalio.DigitalInOut(GP2)
 payload2Pin.switch_to_input(pull=digitalio.Pull.UP)
-payload3Pin = digitalio.DigitalInOut(GP10)
+payload3Pin = digitalio.DigitalInOut(GP3)
 payload3Pin.switch_to_input(pull=digitalio.Pull.UP)
-payload4Pin = digitalio.DigitalInOut(GP11)
+payload4Pin = digitalio.DigitalInOut(GP4)
 payload4Pin.switch_to_input(pull=digitalio.Pull.UP)
 
 def getProgrammingStatus():
     # check GP0 for setup mode
     # see setup mode for instructions
     return not button1_pin.value
-    """
-    progStatusPin = digitalio.DigitalInOut(GP0)
-    progStatusPin.switch_to_input(pull=digitalio.Pull.UP)
-    progStatus = not progStatusPin.value
-    return(progStatus)
-    """
 
 defaultDelay = 0
 
@@ -189,36 +186,54 @@ def selectPayload():
 
     if(payload1State == True):
         payload = "payload.dd"
+        sel = 1
+        color = 0xff0000
 
     elif(payload2State == True):
         payload = "payload2.dd"
+        sel = 2
+        color = 0x00ff00
 
     elif(payload3State == True):
         payload = "payload3.dd"
+        sel = 3
+        color = 0xff00ff
 
     elif(payload4State == True):
         payload = "payload4.dd"
+        sel = 4
+        color = 0xffff00
         
     # load The saved File Config
-    elif File_check(DEFA):
-        f = open(DEFA,"r",encoding='utf-8')
-        payload = f.readline()
-        sel = int(f.readline())
-        color = int(f.readline(),16)
-        f.close()
+    elif File_check(DEFA):# Check if exist
+        if not os.stat(DEFA)[6] == 0:# check if empty
+            f = open(DEFA,"r",encoding='utf-8')
+            payload = f.readline() 
+            sel = int(f.readline())
+            color = int(f.readline(),16)
+            f.close()
 
         # if all pins are high, then no switch is present
         # default to payload1
+
     return payload
 
 def LaunchPayload():
-    global color, sel
+    global color, sel, kbd, layout
+    kbd = Keyboard(usb_hid.devices)
+    layout = KeyboardLayout(kbd)
+
     # Run selected payload
     payload = selectPayload()
     LON(color)
     runScript(payload)
     print("Done")
     LOFF()
+
+def LightPayload():
+    global color, sel
+    payload = selectPayload()
+    PulseA(color)
 
 def SwitchPayload():
     global sel, color, payload, DEFA
@@ -251,8 +266,6 @@ def SwitchPayload():
         else:
             PulseS(color)
             return
-
-    DEFA = "default.txt"
 
     if File_check(payload):
         LON(color)
@@ -312,7 +325,7 @@ async def blink_pico_w_led(led):
         await asyncio.sleep(0.5)
 
 async def monitor_buttons(button1):
-    global inBlinkeyMode, inMenu, enableRandomBeep, enableSirenMode,pixel
+    global inBlinkeyMode, inMenu, enableRandomBeep, enableSirenMode,pixel,color
     print("starting monitor_buttons")
     button1Down = False
     while True:
@@ -325,10 +338,6 @@ async def monitor_buttons(button1):
         if(button1Pushed):
             print("Button 1 pushed")
             button1Down = True
-        if(button1Released):
-            print("Button 1 released")
-            if(button1Down):
-                print("push and released")
 
         if(button1Released):
             if(button1Down):

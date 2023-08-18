@@ -9,7 +9,7 @@ import supervisor
 from LED import *
 import time
 import digitalio
-from board import *
+#from board import *
 import board
 from duckyinpython import *
 if(board.board_id == 'raspberry_pi_pico_w'):
@@ -56,14 +56,13 @@ if(progStatus == False):
     LaunchPayload()
 else:
     print("Update your payload")
-    PulseA(0x0000ff)
+    LightPayload()
 
 
 led_state = False
 
 async def main_loop():
     global led,button1
-
     button_task = asyncio.create_task(monitor_buttons(button1))
     if(board.board_id == 'raspberry_pi_pico_w'):
         pico_led_task = asyncio.create_task(blink_pico_w_led(led))
