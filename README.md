@@ -50,7 +50,7 @@ Enjoy your Pico-Ducky.
 To edit the payload, enter setup mode by connecting the pin 1 (`GP0`) to pin 3 (`GND`), this will stop the pico-ducky from injecting the payload in your own machine.
 The easiest way to do so is by using a jumper wire between those pins as seen bellow.
 
-![Setup mode with a jumper](images/setup-mode.png)
+![Setup mode with a jumper](images/ONE.jpg)
 
 ## USB enable/disable mode
 
