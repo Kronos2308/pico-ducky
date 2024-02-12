@@ -50,12 +50,14 @@ elif(board.board_id == 'raspberry_pi_pico_w'):
 
 progStatus = False
 progStatus = getProgrammingStatus()
+listpayloads()
 print("progStatus", progStatus)
 if(progStatus == False):
+    print("launch your payload")
     # not in setup mode, inject the payload
     LaunchPayload()
 else:
-    print("Update your payload")
+    print("Swap your payload")
     LightPayload()
 
 

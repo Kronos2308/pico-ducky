@@ -26,10 +26,21 @@ from keyboard_layout_win_es import KeyboardLayout
 from keycode_win_es import Keycode
 
 #Global Vars
-sel = 0
 color = 0xffffff
-payload = "payload.dd"
+payload = "payload.txt"
 DEFA = "default.txt"
+letstat = False
+colorar = [0x006600,0x660000,0x006666,0x666600,0x82084b] 
+paylist = []
+
+def obget(obj,val):
+    total = len(obj)
+    str = ""
+    if val < total:
+        str = obj[val]
+    else:
+        str = obj[0]
+    return str
 
 def File_check(file):
     try:
@@ -37,13 +48,18 @@ def File_check(file):
             return True
     except OSError as e:
         print("Unable to open file ", file)
-    
+
     return False
 
 duckyCommands = {
-    'WINDOWS': Keycode.WINDOWS, 'GUI': Keycode.GUI,
-    'APP': Keycode.APPLICATION, 'MENU': Keycode.APPLICATION, 'SHIFT': Keycode.SHIFT,
-    'ALT': Keycode.ALT, 'CONTROL': Keycode.CONTROL, 'CTRL': Keycode.CONTROL,
+    'WINDOWS': Keycode.WINDOWS,
+    'GUI': Keycode.GUI,
+    'APP': Keycode.APPLICATION,
+    'MENU': Keycode.APPLICATION,
+    'SHIFT': Keycode.SHIFT,
+    'ALT': Keycode.ALT,
+    'CONTROL': Keycode.CONTROL,
+    'CTRL': Keycode.CONTROL,
     'DOWNARROW': Keycode.DOWN_ARROW, 'DOWN': Keycode.DOWN_ARROW, 'LEFTARROW': Keycode.LEFT_ARROW,
     'LEFT': Keycode.LEFT_ARROW, 'RIGHTARROW': Keycode.RIGHT_ARROW, 'RIGHT': Keycode.RIGHT_ARROW,
     'UPARROW': Keycode.UP_ARROW, 'UP': Keycode.UP_ARROW, 'BREAK': Keycode.PAUSE,
@@ -95,7 +111,7 @@ def sendString(line):
     layout.write(line)
 
 def parseLine(line):
-    global defaultDelay
+    global defaultDelay, letstat
     if(line[0:3] == "REM"):
         # ignore ducky script comments
         pass
@@ -112,15 +128,25 @@ def parseLine(line):
     elif(line[0:12] == "DEFAULTDELAY"):
         defaultDelay = int(line[13:]) * 10
     elif(line[0:3] == "LED"):
-        if(led.value == True):
-            if(board.board_id == 'waveshare_rp2040_zero'):
-                LON()
-            led.value = False
+        if(board.board_id == 'waveshare_rp2040_zero'):
+            if len(line[4:]) == 0:
+                if not letstat:
+                    LON()
+                    letstat = True
+                else:
+                    LOFF()
+                    letstat = False
+            else:
+                LON(int(line[4:],16))
+                if line[4:] == "0x000000":
+                    letstat = False
+                else:
+                    letstat = True
         else:
-            led.value = True
-            if(board.board_id == 'waveshare_rp2040_zero'):
-                LOFF()
-
+            if(led.value == True):
+                led.value = False
+            else:
+                led.value = True
     else:
         newScriptLine = convertLine(line)
         runScriptLine(newScriptLine)
@@ -133,14 +159,18 @@ button1_pin.pull = Pull.UP      # turn on internal pull-up resistor
 button1 =  Debouncer(button1_pin)
 
 #init payload selection switch
+payload0Pin = digitalio.DigitalInOut(GP0)
+payload0Pin.switch_to_output(True)
+# set input switches
 payload1Pin = digitalio.DigitalInOut(GP1)
-payload1Pin.switch_to_input(pull=digitalio.Pull.UP)
+payload1Pin.switch_to_input(pull=digitalio.Pull.DOWN)
 payload2Pin = digitalio.DigitalInOut(GP2)
-payload2Pin.switch_to_input(pull=digitalio.Pull.UP)
+payload2Pin.switch_to_input(pull=digitalio.Pull.DOWN)
 payload3Pin = digitalio.DigitalInOut(GP3)
-payload3Pin.switch_to_input(pull=digitalio.Pull.UP)
+payload3Pin.switch_to_input(pull=digitalio.Pull.DOWN)
 payload4Pin = digitalio.DigitalInOut(GP4)
-payload4Pin.switch_to_input(pull=digitalio.Pull.UP)
+payload4Pin.switch_to_input(pull=digitalio.Pull.DOWN)
+print("pin g1 is : " + str(payload1Pin.value))
 
 def getProgrammingStatus():
     # check GP0 for setup mode
@@ -170,109 +200,103 @@ def runScript(file):
     except OSError as e:
         print("Unable to open file ", file)
 
+def listpayloads():
+    global paylist
+    paylist = sorted(os.listdir("Payloads"))
+
 def selectPayload():
-    global payload1Pin, payload2Pin, payload3Pin, payload4Pin, payload, sel, color, DEFA
-    #payload = "payload.dd"
+    global payload1Pin, payload2Pin, payload3Pin, payload4Pin, payload, color, DEFA, paylist, colorar
     # check switch status
-    # payload1 = GPIO4 to GND
-    # payload2 = GPIO5 to GND
-    # payload3 = GPIO10 to GND
-    # payload4 = GPIO11 to GND
-    # Preserve Old Select Payload
-    payload1State = not payload1Pin.value
-    payload2State = not payload2Pin.value
-    payload3State = not payload3Pin.value
-    payload4State = not payload4Pin.value
+    # pin 0 conected whith 1,2,3,4 
+    # will temporaly overwrite the saved payload
+    sel = 0
+    if(payload1Pin.value == True):
+        sel = 0
 
-    if(payload1State == True):
-        payload = "payload.dd"
+    elif(payload2Pin.value == True):
         sel = 1
-        color = 0xff0000
 
-    elif(payload2State == True):
-        payload = "payload2.dd"
+    elif(payload3Pin.value == True):
         sel = 2
-        color = 0x00ff00
 
-    elif(payload3State == True):
-        payload = "payload3.dd"
+    elif(payload4Pin.value == True):
         sel = 3
-        color = 0xff00ff
-
-    elif(payload4State == True):
-        payload = "payload4.dd"
-        sel = 4
-        color = 0xffff00
-        
+    
     # load The saved File Config
     elif File_check(DEFA):# Check if exist
         if not os.stat(DEFA)[6] == 0:# check if empty
             f = open(DEFA,"r",encoding='utf-8')
-            payload = f.readline() 
-            sel = int(f.readline())
-            color = int(f.readline(),16)
+            payload = f.readline().strip()
             f.close()
-
+        if not File_check("Payloads/"+payload):
+            SwitchPayload()
+        try:
+            index = paylist.index(payload)
+            color = obget(colorar,index)
+            LEDID(0x222222,index)
+        except OSError as e:
+            print(payload not in list)
+        return payload
         # if all pins are high, then no switch is present
         # default to payload1
+    payload = obget(paylist,sel)
+    color = obget(colorar,sel)
 
     return payload
 
 def LaunchPayload():
-    global color, sel, kbd, layout
+    global color, kbd, layout
     kbd = Keyboard(usb_hid.devices)
     layout = KeyboardLayout(kbd)
 
     # Run selected payload
     payload = selectPayload()
     LON(color)
-    runScript(payload)
+    runScript("Payloads/"+payload)
     print("Done")
     LOFF()
 
+
 def LightPayload():
-    global color, sel
+    global color
     payload = selectPayload()
     PulseA(color)
 
 def SwitchPayload():
-    global sel, color, payload, DEFA
-    
-    #reset
-    if sel > 4:sel = 1
-        
-    sel+=1
-    if sel == 1:
-        payload = "payload.dd"
-        color = 0xff0000
-        if not File_check(payload):sel+=1
-    if sel == 2:
-        payload = "payload2.dd"
-        color = 0x00ff00
-        if not File_check(payload):sel+=1
-    if sel == 3:
-        payload = "payload3.dd"
-        color = 0xff00ff
-        if not File_check(payload):sel+=1
-    if sel == 4:
-        payload = "payload4.dd"
-        color = 0xffff00
-        if not File_check(payload):sel+=1
-    if sel == 5:#reset
-        color = 0xff0000
-        sel = 1
-        if not payload == "payload.dd":
-            payload = "payload.dd"
-        else:
-            PulseS(color)
-            return
+    global color, payload, DEFA, paylist, colorar
 
-    if File_check(payload):
+    #List payloads
+    sel = 0
+    print(paylist)
+    if payload in paylist:
+        total = len(paylist)
+        for x in range(total):
+            print(paylist[x]+" "+str(x)+" "+payload+" "+str(paylist[x] == payload))
+            if paylist[x] == payload:
+                if x == (total -1):
+                    sel = 0
+                else:
+                    sel = x+1
+                payload = paylist[sel]
+                break
+    else:
+        sel = 0
+        payload = paylist[sel]
+
+
+                
+            
+    print("----> "+payload)
+    color = obget(colorar,sel)
+
+
+    if File_check("Payloads/"+payload):
         LON(color)
         f = open(DEFA,"w+")
-        f.write(payload+"\n"+str(sel)+"\n"+hex(color))
+        f.write(payload)
         f.close()
         LOFF()
+    LEDID(0x222222,sel)
 
     return
 
@@ -344,5 +368,5 @@ async def monitor_buttons(button1):
                 SwitchPayload()
             button1Down = False
 
-        await asyncio.sleep(0)
+        await asyncio.sleep(0.1)
 

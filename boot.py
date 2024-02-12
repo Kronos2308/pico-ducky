@@ -36,6 +36,7 @@ elif(board.board_id == 'waveshare_rp2040_zero'):
     # so webapp can access storage
     noStorage = noStorageStatus
 print(board.board_id)
+#print(board)
 
 if(noStorage == True):
     # don't show USB drive to host PC
@@ -44,3 +45,4 @@ if(noStorage == True):
 else:
     # normal boot
     print("USB drive enabled")
+
